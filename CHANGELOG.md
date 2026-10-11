@@ -48,6 +48,13 @@ Each entry has:
     when the last check got no answer. `--check` says when it could not check, and when `OMARCHY_PATH` is not set.
   - The terminal list also knows foot under its second window class and its client.
   - The repository now has a `.gitattributes` file for LF line endings.
+- **Pilot on a real machine before the release:**
+  - The box and the welcome note now wear the shell's theme, as Omarchy's own dialogs do: its colours, its monospace font
+    and type sizes, square buttons with thin borders, and Hyprland's corner rounding. Allow takes the theme's accent once
+    it is ready. Small text no longer uses the theme's "muted" colour, which some themes make too dark to read.
+  - "Open Obsidian" also knows the window class of newer Obsidian builds, `md.obsidian.Obsidian`. Before, it waited and
+    then reported that Obsidian did not open.
+  - The MCP server frees its one-call slot before it answers, so a client's next call can no longer get a false busy answer.
 - **Security:**
   - The plugin is a service only. It has no panel, overlay or menu that `omarchy-shell shell call` could reach.
   - Requests arrive through the plugin's own IPC target. No request files are read.

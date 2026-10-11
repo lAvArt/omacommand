@@ -94,6 +94,14 @@ test("the terminal entry takes the class names of foot that Omarchy's own window
   }
 });
 
+test("the Obsidian entry takes both of its app ids: the old one and that of its desktop file (pilot F)", () => {
+  const { V } = makeHarness();
+  for (const cls of ["obsidian", "Obsidian", "md.obsidian.Obsidian", "MD.OBSIDIAN.OBSIDIAN"]) assert.equal(V.appForClass(cls), "obsidian", cls);
+  for (const cls of ["md.obsidian", "md-obsidian-Obsidian", "md.obsidian.Obsidian2", "xobsidian", " obsidian", ""]) {
+    assert.equal(V.appForClass(cls), "other", JSON.stringify(cls));
+  }
+});
+
 test("box_model.js sees nothing of vocab.js's globals and the other way round: QML gives each its own scope (review C16)", () => {
   const h = makeHarness();
   for (const name of ["hasOwn", "isObj", "asciiLine", "cleanLine", "MSG", "LIMITS", "APPS", "deepFreeze", "VocabApi", "validatePlan", "lua", "stepWords"]) {

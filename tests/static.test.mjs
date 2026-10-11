@@ -483,8 +483,48 @@ test("AllowBox.qml reports the global pointer position, has no centred card, and
   const card = allowClean.slice(allowClean.indexOf("id: card"), allowClean.indexOf("id: col"));
   assert.ok(card.length > 50 && !/centerIn/.test(card), "the card must not be centred on its content");
   assert.match(card, /y: Math\.max\(24, /);
-  assert.match(allowBox, /Item \{\s*width: col\.width\s*height: 56/, "the footer has a fixed height");
-  assert.match(allowBox, /Item \{\s*width: col\.width\s*height: 36/, "the hint row has a fixed height");
+  // The footer and the hint row get the room of their longest text, measured by a hidden twin that never changes while the
+  // box is open: the footer with the longest countdown, and the longest hint the model has.
+  const twin = (id, text, lines) => new RegExp("Item \\{\\s*width: col\\.width\\s*height: " + id + "\\.implicitHeight\\s*Text \\{\\s*id: " + id +
+    "\\s*visible: false\\s*width: parent\\.width\\s*text: " + text + "\\s*font\\.family: win\\.fontFamily\\s*font\\.pixelSize: win\\.smallSize\\s*" +
+    "textFormat: Text\\.PlainText\\s*wrapMode: Text\\.Wrap\\s*maximumLineCount: " + lines + "\\s*elide: Text\\.ElideRight\\s*\\}\\s*Text \\{\\s*width: parent\\.width\\s");
+  assert.match(allowBox, twin("footerRoom", "win\\.content\\.footer \\+ win\\.longestCountdown", 3), "the footer has the room of its longest text");
+  assert.match(allowBox, twin("hintRoom", "win\\.longestHint", 2), "the hint row has the room of the longest hint");
+  const model = read(path.join(ROOT, "box_model.js"));
+  const hints = [...model.matchAll(/^var HINT_\w+ = "([^"]*)";/gm)].map((m) => m[1]);
+  assert.ok(hints.length >= 3);
+  const longest = hints.reduce((a, b) => (b.length > a.length ? b : a));
+  assert.ok(allowBox.includes('readonly property string longestHint: "' + longest + '"'), "longestHint is the longest of " + JSON.stringify(hints));
+  // The countdown is at most 10 (its window is 10 s) and is drawn in exactly the form the twin measures.
+  assert.match(model, /^var BOX_COUNTDOWN_MS = 10000;/m);
+  assert.ok(allowBox.includes('readonly property string longestCountdown: " Auto-deny in 10 s."'));
+  assert.ok(allowBox.includes('text: win.content.footer + (win.view.countdown > 0 ? " Auto-deny in " + win.view.countdown + " s." : "")'));
+  // The buttons' row has the theme's button height, and Allow and Deny the theme's button width.
+  assert.match(allowBox, /Item \{\s*width: col\.width\s*height: win\.buttonHeight\s/);
+  for (const id of ["denyBtn", "allowBtn"]) {
+    assert.match(allowClean, new RegExp("id: " + id + "\\s*width: win\\.buttonWidth\\s*height: win\\.buttonHeight\\s"), id);
+  }
+});
+
+test("the boxes wear the shell's theme: every colour is a theme token, and a fixed colour is only the fallback for a missing one", () => {
+  for (const f of ["AllowBox.qml", "WelcomeBox.qml"]) {
+    const text = read(path.join(ROOT, f)).replace(/\r\n/g, "\n");
+    let fixed = 0;
+    for (const m of text.matchAll(/#[0-9a-fA-F]{3,8}\b/g)) {
+      const line = text.slice(text.lastIndexOf("\n", m.index) + 1, text.indexOf("\n", m.index));
+      if (/^\s*\/\//.test(line)) continue;
+      assert.match(line, /^\s*readonly property color \w+: pick\(Commons\.Color\.(foreground|background|accent|urgent), "#[0-9a-f]{6}"\)$/, f + ": " + line.trim());
+      fixed++;
+    }
+    assert.ok(fixed >= 3, f + ": the colour fallbacks");
+    assert.match(text, /^import qs\.Commons as Commons$/m, f);
+    assert.match(text, /readonly property string fontFamily: token\(function \(\) \{ return Commons\.Style\.font\.family \}, "monospace"\)/, f);
+    assert.match(text, /readonly property int cornerRadius: token\(function \(\) \{ return Commons\.Style\.cornerRadius \}, 0\)/, f);
+    // A token that throws (a shell without it) gives the fallback instead of breaking the binding.
+    assert.match(text, /function token\(read, d\) \{\s*try \{ return win\.pick\(read\(\), d\) \} catch \(e\) \{ return d \}\s*\}/, f);
+    // The theme's "muted" can be a surface colour, so no text uses it.
+    assert.ok(!/Color\.muted/.test(text), f + " uses Color.muted");
+  }
 });
 
 test("AllowBox.qml forces keyboard focus when the box becomes visible and when its window becomes active (review C8)", () => {

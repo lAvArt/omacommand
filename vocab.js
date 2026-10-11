@@ -127,7 +127,8 @@ var APPS = {
   browser: { name: "Browser", folder: false, reuse: true, cls: /^(chromium|chromium-browser|brave-browser|google-chrome|firefox|org\.mozilla\.firefox|zen|vivaldi-stable|microsoft-edge)$/i },
   files: { name: "Files", folder: true, reuse: false, cls: /^org\.gnome\.nautilus$/i },
   vscode: { name: "VS Code", folder: true, reuse: true, cls: /^(com\.microsoft\.vscode|code)$/i },
-  obsidian: { name: "Obsidian", folder: false, reuse: true, cls: /^obsidian$/i },
+  // Recent Obsidian builds run under the app id of their desktop file (pilot F: md.obsidian.Obsidian on 4.0.4).
+  obsidian: { name: "Obsidian", folder: false, reuse: true, cls: /^(obsidian|md\.obsidian\.obsidian)$/i },
   spotify: { name: "Spotify", folder: false, reuse: true, cls: /^spotify$/i },
   btop: { name: "btop", folder: false, reuse: true, cls: /^org\.omarchy\.btop$/i }
 };
