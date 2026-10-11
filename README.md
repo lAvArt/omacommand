@@ -155,6 +155,10 @@ The second line also shows the date and the title of that version. Compare it wi
 `git -C ~/.config/omarchy/plugins/io.github.lavart.omacommand checkout --detach <sha>`. Note that `omarchy plugin update`
 moves it to the newest version again.
 
+**After an update, a reinstall or a checkout, restart the Omarchy shell** with `omarchy-restart-shell` (the top bar
+restarts). Until then the shell can keep running the version it loaded before. The check in Troubleshooting tells you
+when the version that runs is not the one installed.
+
 ## Remove it
 
 ```bash
@@ -172,8 +176,8 @@ The first line removes the plugin. The second disconnects Claude Code. The third
   `/usr/bin/ruby --disable=gems,rubyopt ~/.config/omarchy/plugins/io.github.lavart.omacommand/mcp/server.rb --check`
   - It prints one line per check: `OK`, or `FIX` with the exact command to run.
   - It covers Ruby, `OMARCHY_PATH` (set in a terminal of your Omarchy desktop, often not over SSH), the plugin being
-    enabled, the Omarchy shell running, the installed version, and whether Omacommand's files were changed after they were
-    added. It says so when it could not check something. Add `--log` to see the last 20 lines of the log.
+    enabled, the Omarchy shell running, the installed version and whether the shell runs that version, and whether
+    Omacommand's files were changed after they were added. It says so when it could not check something. Add `--log` to see the last 20 lines of the log.
   - It never proposes anything and never opens a box.
 - **No box appears.** Run the check above. Most often the plugin is not enabled
   (`omarchy plugin enable io.github.lavart.omacommand`).

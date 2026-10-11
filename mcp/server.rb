@@ -637,13 +637,18 @@ module Omacommand
         elsif changed.empty?
           line.call(true, "The files are as they were installed.")
         else
-          line.call(false, "Omacommand's files were changed after it was installed. If you did not change them, reinstall : omarchy plugin remove io.github.lavart.omacommand --yes && omarchy plugin add https://github.com/lAvArt/omacommand --enable")
+          line.call(false, "Omacommand's files were changed after it was installed. If you did not change them, reinstall : omarchy plugin remove io.github.lavart.omacommand --yes && omarchy plugin add https://github.com/lAvArt/omacommand --enable && omarchy-restart-shell")
         end
       end
 
+      # The shell keeps running the code it loaded until it restarts, also after an update or a reinstall (review C22). The
+      # version in ping comes from the code that runs; VERSION here was just read from disk.
       kind, ans = Service.call("ping")
-      if kind == :ok && ans["ready"] == true
-        line.call(true, "Omacommand answers in the Omarchy shell.")
+      if kind == :ok && ans["ready"] == true && ans["version"] == VERSION
+        line.call(true, "Omacommand #{VERSION} answers in the Omarchy shell.")
+      elsif kind == :ok && ans["ready"] == true
+        running = ans["version"].is_a?(String) ? Text.ascii(ans["version"], 20) : "an unknown version"
+        line.call(false, "The Omarchy shell still runs Omacommand #{running}, but #{VERSION} is installed. The shell keeps the code it loaded until it restarts : omarchy-restart-shell")
       elsif %i[not_running no_binary].include?(kind)
         line.call(false, "The Omarchy shell is not running : log in to your Omarchy desktop and run this check there.")
       elsif kind == :not_enabled

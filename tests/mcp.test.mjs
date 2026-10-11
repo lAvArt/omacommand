@@ -44,7 +44,9 @@ if [ "$mode" = "needs_path" ] && [ -z "$OMARCHY_PATH" ]; then echo "OMARCHY_PATH
 if [ "$1" != "${TARGET}" ]; then echo "Target not found." >&2; exit 1; fi
 n=0
 case "$2" in
-  ping) echo '{"v":1,"name":"omacommand","version":"1.0.0","ready":true}' ;;
+  ping)
+    if [ "$mode" = "old_version" ]; then echo '{"v":1,"name":"omacommand","version":"0.9.0","ready":true}'
+    else echo '{"v":1,"name":"omacommand","version":"1.0.0","ready":true}'; fi ;;
   propose)
     printf '%s' "$3" > "$dir/propose.json"
     id="$(printf '%s' "$3" | grep -o '"id":"[0-9a-f]\\{32\\}"' | head -n 1 | cut -d'"' -f4)"
@@ -649,6 +651,7 @@ test("--check prints OK and NOTE lines and exits 0 when everything is in place",
     assert.equal(r.status, 0, r.stdout + r.stderr);
     assert.ok(lines.filter((l) => l.startsWith("OK")).length >= 7);
     assert.ok(lines.includes("OK OMARCHY_PATH is set."), r.stdout);
+    assert.ok(lines.includes("OK Omacommand 1.0.0 answers in the Omarchy shell."), r.stdout);
     assert.ok(lines.at(-1).startsWith("NOTE If your agent can run terminal commands without asking you"));
     assert.deepEqual(fake.calls().map((l) => l.split(" ").slice(0, 2).join(" ")), [TARGET + " ping"], "it only pings: it never proposes");
     assert.equal(r.stderr, "");
@@ -674,6 +677,24 @@ test("--check says what to fix, with the exact command", { skip: skipFake, timeo
     assert.match(none.stdout, /^FIX XDG_RUNTIME_DIR is not set : run this from a terminal in your Omarchy desktop\.$/m);
     assert.match(none.stdout, /^FIX omarchy-shell was not found on PATH/m);
     assert.match(none.stdout, /^FIX OMARCHY_PATH is not set : run this from a terminal in your Omarchy desktop, where omarchy-shell can find the shell\.$/m);
+  } finally {
+    fake.remove();
+    plugin.remove();
+  }
+});
+
+test("--check says to restart the shell when the shell runs another version than the one installed (review C22)", { skip: skipFake, timeout: 60000 }, () => {
+  const fake = makeFake("old_version"); // the shell still runs the code it loaded before an update
+  const plugin = copyPlugin();
+  try {
+    const r = spawnSync(RUBY, ["--disable=gems,rubyopt", plugin.server, "--check"], {
+      encoding: "utf8", env: Object.assign({}, process.env, { PATH: fake.dir + path.delimiter + (process.env.PATH || ""), XDG_RUNTIME_DIR: os.tmpdir(), OMARCHY_PATH: os.tmpdir() })
+    });
+    assert.equal(r.status, 1, r.stdout);
+    const lines = r.stdout.split("\n");
+    assert.ok(lines.includes("FIX The Omarchy shell still runs Omacommand 0.9.0, but 1.0.0 is installed. The shell keeps the code it loaded until it restarts : omarchy-restart-shell"), r.stdout);
+    assert.ok(!lines.some((l) => l.includes("answers in the Omarchy shell")), r.stdout);
+    assert.deepEqual(fake.calls().map((l) => l.split(" ").slice(0, 2).join(" ")), [TARGET + " ping"], "it only pings: it never proposes");
   } finally {
     fake.remove();
     plugin.remove();

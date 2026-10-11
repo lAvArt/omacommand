@@ -55,6 +55,8 @@ Each entry has:
   - "Open Obsidian" also knows the window class of newer Obsidian builds, `md.obsidian.Obsidian`. Before, it waited and
     then reported that Obsidian did not open.
   - The MCP server frees its one-call slot before it answers, so a client's next call can no longer get a false busy answer.
+  - `--check` now says when the Omarchy shell still runs another version than the one installed, and the README says to
+    restart the shell after an update or a reinstall: until it restarts, the shell can keep running the code it loaded.
 - **Security:**
   - The plugin is a service only. It has no panel, overlay or menu that `omarchy-shell shell call` could reach.
   - Requests arrive through the plugin's own IPC target. No request files are read.
@@ -62,3 +64,4 @@ Each entry has:
     does no answer within 45 seconds.
   - Closing is one window at a time, bound when the box is built and named in it.
   - No network, no screenshots, no free text, no URLs, no shell or Lua from the agent.
+  - An update takes effect only after the shell restarts, so a fix can stay inactive until then; `--check` reports it.
