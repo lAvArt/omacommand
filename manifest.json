@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.lavart.omacommand",
+  "name": "Omacommand",
+  "version": "1.0.0",
+  "author": "lAvArt",
+  "description": "Lets an AI agent on this computer propose desktop steps from a fixed list. Nothing runs until you click Allow. No network.",
+  "license": "MIT",
+  "kinds": ["service"],
+  "entryPoints": { "service": "Service.qml" }
+}

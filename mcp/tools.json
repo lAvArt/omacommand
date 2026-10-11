@@ -1,0 +1,185 @@
+{
+  "tools": [
+    {
+      "name": "propose_desk_plan",
+      "description": "Ask to run desktop steps on this computer: switch workspaces, open apps from a fixed list, and arrange windows.\nThe person sees exactly these steps and must click Allow. If they say no, do not ask again for the same thing unless they ask you to.\nA request has 1 to 12 steps. The apps are: terminal, browser, files, vscode, obsidian, spotify, btop. Nothing else can be requested: no commands, no web addresses, no free text, no screenshots.\nThe answer says what the person decided and how each step went. If the steps are still running after about 50 seconds, call desk_plan_result with the id it gives.\nEach step is an object with \"do\" and its fields:\n- workspace: Go to a workspace. Fields: to (required).\n- open: Open an app. Only the terminal, files and vscode can open in a folder. Fields: app (required), place (optional), folder (optional).\n- focus: Focus a window: give app or direction, not both. Fields: app (optional), direction (optional).\n- move: Move a window to a workspace. Without app it is the current window. Fields: to (required), follow (optional), app (optional).\n- swap: Swap the current window with its neighbour. Fields: direction (required).\n- resize: Change a window size. Fields: change (required), amount (required), app (optional).\n- window: Do something with a window. app is allowed for float, fullscreen, full_width, group, pin, center, to_scratchpad and close. close needs one window to be known: name its app, or leave app out for the current window. Fields: what (required), app (optional).\n- layout: Set the layout of the current workspace. Fields: mode (required).\n- scratchpad: Show or hide the scratchpad. Fields: no other fields.\n- desktop: Toggle the night light or the gaps between windows. Fields: what (required).\n- system: Lock the screen, change volume or brightness, control music, or show the time or battery in a notification. Fields: what (required).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 12,
+            "description": "The steps, in order.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "do": {
+                  "type": "string",
+                  "enum": [
+                    "workspace",
+                    "open",
+                    "focus",
+                    "move",
+                    "swap",
+                    "resize",
+                    "window",
+                    "layout",
+                    "scratchpad",
+                    "desktop",
+                    "system"
+                  ],
+                  "description": "The kind of step."
+                },
+                "to": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "description": "Workspace number, 1 to 10."
+                },
+                "app": {
+                  "type": "string",
+                  "enum": [
+                    "terminal",
+                    "browser",
+                    "files",
+                    "vscode",
+                    "obsidian",
+                    "spotify",
+                    "btop"
+                  ],
+                  "description": "An app from the list: terminal, browser, files, vscode, obsidian, spotify, btop."
+                },
+                "place": {
+                  "type": "string",
+                  "enum": [
+                    "left",
+                    "right",
+                    "up",
+                    "down"
+                  ],
+                  "description": "Where the new window goes, next to the current one: left, right, up or down."
+                },
+                "folder": {
+                  "type": "string",
+                  "maxLength": 270,
+                  "pattern": "^(?:~|(?:~\\/)?[A-Za-z0-9_][A-Za-z0-9._-]{0,63}(?:\\/[A-Za-z0-9_][A-Za-z0-9._-]{0,63}){0,3})$",
+                  "description": "A folder inside the home folder, such as ~/projects/site. Up to 4 names; letters, digits, dot, dash and underscore; none starting with a dot."
+                },
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "left",
+                    "right",
+                    "up",
+                    "down"
+                  ],
+                  "description": "left, right, up or down."
+                },
+                "follow": {
+                  "type": "boolean",
+                  "description": "true to go to that workspace as well. Default false."
+                },
+                "change": {
+                  "type": "string",
+                  "enum": [
+                    "wider",
+                    "narrower",
+                    "taller",
+                    "shorter"
+                  ],
+                  "description": "How to change the window size."
+                },
+                "amount": {
+                  "type": "string",
+                  "enum": [
+                    "small",
+                    "medium",
+                    "large",
+                    "xlarge",
+                    "huge"
+                  ],
+                  "description": "How much to change it."
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "tiled",
+                    "scrolling"
+                  ],
+                  "description": "The layout for the current workspace."
+                },
+                "what": {
+                  "type": "string",
+                  "enum": [
+                    "float",
+                    "fullscreen",
+                    "full_width",
+                    "pop_out",
+                    "toggle_split",
+                    "swap_split",
+                    "group",
+                    "pin",
+                    "center",
+                    "transparency",
+                    "to_scratchpad",
+                    "close",
+                    "nightlight",
+                    "gaps",
+                    "lock",
+                    "volume_up",
+                    "volume_down",
+                    "mute",
+                    "brightness_up",
+                    "brightness_down",
+                    "play_pause",
+                    "next_track",
+                    "previous_track",
+                    "show_time",
+                    "show_battery"
+                  ],
+                  "description": "What to do. For window: float, fullscreen, full_width, pop_out, toggle_split, swap_split, group, pin, center, transparency, to_scratchpad, close. For desktop: nightlight, gaps. For system: lock, volume_up, volume_down, mute, brightness_up, brightness_down, play_pause, next_track, previous_track, show_time, show_battery."
+                }
+              },
+              "required": [
+                "do"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "desk_plan_result",
+      "description": "Collect the result of a request from propose_desk_plan that was still running. Give the id it returned. Waits up to 20 seconds. The person sees exactly these steps and must click Allow. If they say no, do not ask again for the same thing unless they ask you to.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "description": "The id from propose_desk_plan."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "desk_state",
+      "description": "See the active workspace, and which apps from the list are open on which workspace. It never includes window titles, addresses or pictures. It can be asked about once a second.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    }
+  ]
+}
