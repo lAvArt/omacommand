@@ -422,12 +422,15 @@ module Omacommand
       Thread.new do
         begin
           text, error = run_tool(name, args, Progress.new(self, token))
-          send_result(id, text_result(text, error)) unless @cancelled
+          answer = -> { send_result(id, text_result(text, error)) }
         rescue StandardError
-          send_error(id, -32_603, "Internal error.") unless @cancelled
+          answer = -> { send_error(id, -32_603, "Internal error.") }
         ensure
+          # The slot is free before the answer goes out: a client's next call can come the moment it reads this one.
+          cancelled = @cancelled
           @busy = false
         end
+        answer.call unless cancelled
       end
     end
 

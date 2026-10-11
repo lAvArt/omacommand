@@ -587,12 +587,15 @@ test("stdout carries only valid JSON-RPC lines, stderr stays empty", { skip: ski
     c.send("garbage {");
     c.send({ jsonrpc: "2.0", id: 2, method: "tools/list" });
     c.send(call(3, "desk_state", {}));
+    // One tool call at a time: sent together with desk_state, the propose would get the busy answer at once, and closing
+    // stdin would end the server before desk_state answers (pilot F, 2026-10-12). It goes the moment desk_state has answered.
+    await c.reply(3);
     c.send(call(4, "propose_desk_plan", { steps: [{ do: "workspace", to: 2 }] }));
     c.send({ jsonrpc: "2.0", id: 5, method: "nope" });
-    await c.reply(4, 30000);
+    assert.equal((await c.reply(4, 30000)).result.isError, false, "the propose ran, it was not answered busy");
     await c.reply(5);
     await c.close();
-    assert.ok(c.lines.length >= 6);
+    assert.equal(c.lines.length, 6, c.lines.join("\n"));
     for (const line of c.lines) {
       const m = JSON.parse(line);
       assert.equal(m.jsonrpc, "2.0", line);
