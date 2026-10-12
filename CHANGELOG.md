@@ -57,6 +57,8 @@ Each entry has:
   - The MCP server frees its one-call slot before it answers, so a client's next call can no longer get a false busy answer.
   - `--check` now says when the Omarchy shell still runs another version than the one installed, and the README says to
     restart the shell after an update or a reinstall: until it restarts, the shell can keep running the code it loaded.
+  - `--check` no longer lets git rewrite its index file inside the plugin folder. The shell reloads a plugin whose folder
+    changes, so a box that was open during the check could disappear.
 - **Security:**
   - The plugin is a service only. It has no panel, overlay or menu that `omarchy-shell shell call` could reach.
   - Requests arrive through the plugin's own IPC target. No request files are read.

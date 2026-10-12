@@ -633,7 +633,7 @@ module Omacommand
         puts "OK The installed commit is #{Text.ascii(commit, 64)} : compare it with CHANGELOG.md on GitHub."
         changed = git(dir, "status", "--porcelain")
         if changed.nil?
-          line.call(false, "Could not check whether Omacommand's files were changed after they were added, because git status failed : git -C #{Text.ascii(dir, 200)} status --porcelain")
+          line.call(false, "Could not check whether Omacommand's files were changed after they were added, because git status failed : git --no-optional-locks -C #{Text.ascii(dir, 200)} status --porcelain")
         elsif changed.empty?
           line.call(true, "The files are as they were installed.")
         else
@@ -695,8 +695,10 @@ module Omacommand
       nil
     end
 
+    # --check changes nothing. A plain git status can rewrite .git/index inside the plugin folder, and the shell reloads
+    # a plugin whose folder changes, which loses an open box (review C23).
     def self.git(dir, *args)
-      res = Child.run(["git", "-C", dir] + args)
+      res = Child.run(["git", "--no-optional-locks", "-C", dir] + args)
       return nil if res.missing || res.timed_out || !res.ok
 
       res.out.to_s.strip

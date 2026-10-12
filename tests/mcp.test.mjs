@@ -728,14 +728,17 @@ test("--check says it could not check when git status fails, instead of saying t
   const fake = makeFake("ok");
   const plugin = copyPlugin();
   try {
-    // A git that finds the commit and then fails on status, as it does for a folder it does not trust.
+    // A git that finds the commit and then fails on status, as it does for a folder it does not trust. It logs its arguments.
     const gitFile = path.join(fake.dir, "git");
     fs.writeFileSync(gitFile, [
       "#!/bin/sh",
-      "case \"$3\" in",
-      "  rev-parse) echo 0123456789abcdef0123456789abcdef01234567 ;;",
-      "  status) echo \"fatal: detected dubious ownership\" >&2; exit 128 ;;",
-      "esac",
+      "echo \"$*\" >> \"$(dirname \"$0\")/git.log\"",
+      "for a in \"$@\"; do",
+      "  case \"$a\" in",
+      "    rev-parse) echo 0123456789abcdef0123456789abcdef01234567; exit 0 ;;",
+      "    status) echo \"fatal: detected dubious ownership\" >&2; exit 128 ;;",
+      "  esac",
+      "done",
       ""
     ].join("\n"));
     fs.chmodSync(gitFile, 0o755);
@@ -744,9 +747,13 @@ test("--check says it could not check when git status fails, instead of saying t
     });
     assert.equal(r.status, 1, r.stdout);
     const lines = r.stdout.split("\n");
-    assert.ok(lines.some((l) => /^FIX Could not check whether Omacommand's files were changed after they were added, because git status failed : git -C .+ status --porcelain$/.test(l)), r.stdout);
+    assert.ok(lines.some((l) => /^FIX Could not check whether Omacommand's files were changed after they were added, because git status failed : git --no-optional-locks -C .+ status --porcelain$/.test(l)), r.stdout);
     assert.ok(!lines.includes("OK The files are as they were installed."), r.stdout);
     assert.ok(lines.some((l) => l.startsWith("OK The installed commit is 0123456789abcdef0123456789abcdef01234567")), r.stdout);
+    // Every git call takes no optional locks, so --check never rewrites .git/index (review C23).
+    const calls = fs.readFileSync(path.join(fake.dir, "git.log"), "utf8").trim().split("\n");
+    assert.equal(calls.length, 2, calls.join("\n"));
+    assert.ok(calls.every((c) => c.startsWith("--no-optional-locks -C ")), calls.join("\n"));
   } finally {
     fake.remove();
     plugin.remove();
@@ -771,6 +778,32 @@ test("--check with a changed plugin folder under git warns that the files were c
     const changed = spawnSync(RUBY, ["--disable=gems,rubyopt", plugin.server, "--check"], { encoding: "utf8", env });
     assert.equal(changed.status, 1);
     assert.match(changed.stdout, /^FIX Omacommand's files were changed after it was installed\. If you did not change them, reinstall : /m);
+  } finally {
+    fake.remove();
+    plugin.remove();
+  }
+});
+
+test("--check does not rewrite .git/index, so the shell does not reload the plugin and lose an open box (review C23)", { skip: skipRuby, timeout: 60000 }, () => {
+  const git = spawnSync("git", ["--version"], { encoding: "utf8" });
+  if (git.error || git.status !== 0) return;
+  const fake = makeFake("ok"); // on Windows it cannot run, and --check only says the shell is not running
+  const plugin = copyPlugin();
+  try {
+    const run = (args) => spawnSync("git", ["-C", plugin.dir, "-c", "user.name=t", "-c", "user.email=t@users.noreply.github.com", "-c", "commit.gpgsign=false", ...args], { encoding: "utf8" });
+    assert.equal(run(["init", "-q"]).status, 0);
+    assert.equal(run(["add", "-A"]).status, 0);
+    assert.equal(run(["commit", "-q", "-m", "x"]).status, 0);
+    // An older time on a file whose content did not change: a plain git status refreshes the index and writes it again.
+    const old = new Date("2020-01-01T00:00:00Z");
+    fs.utimesSync(path.join(plugin.dir, "manifest.json"), old, old);
+    const index = path.join(plugin.dir, ".git", "index");
+    const before = fs.readFileSync(index);
+    const env = Object.assign({}, process.env, { PATH: fake.dir + path.delimiter + (process.env.PATH || ""), XDG_RUNTIME_DIR: os.tmpdir(), OMARCHY_PATH: os.tmpdir() });
+    const r = spawnSync(RUBY, ["--disable=gems,rubyopt", plugin.server, "--check"], { encoding: "utf8", env });
+    assert.ok(r.stdout.replace(/\r\n/g, "\n").split("\n").includes("OK The files are as they were installed."), r.stdout);
+    assert.ok(fs.readFileSync(index).equals(before), "--check rewrote .git/index");
+    assert.ok(!fs.existsSync(index + ".lock"));
   } finally {
     fake.remove();
     plugin.remove();
