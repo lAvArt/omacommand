@@ -21,8 +21,11 @@ function walk(dir, out = []) {
   return out;
 }
 
-const FILES = walk(ROOT);
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join("/");
+// The marketplace preview (spec 9.3) is the one file that is not text. It has its own checks; the text checks skip it.
+const PREVIEW = "preview.png";
+const ALL = walk(ROOT);
+const FILES = ALL.filter((p) => rel(p) !== PREVIEW);
 const read = (p) => fs.readFileSync(p, "utf8");
 const SHIPPED = FILES.filter((p) => !rel(p).startsWith("tests/")); // code and docs that users get
 const CODE = SHIPPED.filter((p) => /\.(qml|js|rb|mjs)$/.test(p));
@@ -44,16 +47,25 @@ test("the files needed by spec 13 D are all there", () => {
 // Windows may record any mode it likes. The release step checks the modes git will publish, in a clone or on Linux:
 //   git ls-files -s    (every line must start with 100644, none with 100755)
 // Fix a wrong one with: git update-index --chmod=-x <file>   (review C16)
-test("no file is over 512 KiB, the total is under 8 MiB, fewer than 1,000 files, no executable bits", () => {
+test("no file is over 512 KiB (the preview 1 MiB), the total is under 8 MiB, fewer than 1,000 files, no executable bits", () => {
   let total = 0;
-  for (const p of FILES) {
+  for (const p of ALL) {
     const st = fs.statSync(p);
-    assert.ok(st.size < 512 * 1024, rel(p) + " is " + st.size + " bytes");
+    if (rel(p) === PREVIEW) assert.ok(st.size <= 1024 * 1024, rel(p) + " is " + st.size + " bytes");
+    else assert.ok(st.size < 512 * 1024, rel(p) + " is " + st.size + " bytes");
     assert.equal(st.mode & 0o111, 0, rel(p) + " is executable");
     total += st.size;
   }
   assert.ok(total < 8 * 1024 * 1024);
-  assert.ok(FILES.length < 1000);
+  assert.ok(ALL.length < 1000);
+});
+
+test("preview.png, if there, is a PNG and the only file with that name", () => {
+  const previews = ALL.filter((p) => path.basename(p) === PREVIEW).map(rel);
+  if (previews.length === 0) return;
+  assert.deepEqual(previews, [PREVIEW]);
+  const head = fs.readFileSync(path.join(ROOT, PREVIEW)).subarray(0, 8);
+  assert.deepEqual([...head], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 });
 
 test("exactly one manifest.json, at the root", () => {
