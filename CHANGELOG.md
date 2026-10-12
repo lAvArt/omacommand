@@ -13,7 +13,7 @@ Each entry has:
 
 ## 1.0.0 - 2026-10-11
 
-- **Commit:** to be added after the release commit.
+- **Commit:** `bc80bd0c641bff45d92115b4dece67389c7436f9`
 - **Tag:** `v1.0.0` (signed).
 - **Marketplace verification issue:** to be added after the listing.
 - **What changed:** the first release.
