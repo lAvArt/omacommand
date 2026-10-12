@@ -751,6 +751,7 @@ test("--check says it could not check when git status fails, instead of saying t
     assert.ok(!lines.includes("OK The files are as they were installed."), r.stdout);
     assert.ok(lines.some((l) => l.startsWith("OK The installed commit is 0123456789abcdef0123456789abcdef01234567")), r.stdout);
     // Every git call takes no optional locks, so --check never rewrites .git/index (review C23).
+    // (Omarchy 4.0.4's folder watcher skips .git, so this never reloaded the plugin; --check is simply meant to write nothing.)
     const calls = fs.readFileSync(path.join(fake.dir, "git.log"), "utf8").trim().split("\n");
     assert.equal(calls.length, 2, calls.join("\n"));
     assert.ok(calls.every((c) => c.startsWith("--no-optional-locks -C ")), calls.join("\n"));
@@ -784,7 +785,7 @@ test("--check with a changed plugin folder under git warns that the files were c
   }
 });
 
-test("--check does not rewrite .git/index, so the shell does not reload the plugin and lose an open box (review C23)", { skip: skipRuby, timeout: 60000 }, () => {
+test("--check does not rewrite .git/index: it changes nothing in the plugin folder (review C23)", { skip: skipRuby, timeout: 60000 }, () => {
   const git = spawnSync("git", ["--version"], { encoding: "utf8" });
   if (git.error || git.status !== 0) return;
   const fake = makeFake("ok"); // on Windows it cannot run, and --check only says the shell is not running

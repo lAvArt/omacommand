@@ -695,8 +695,7 @@ module Omacommand
       nil
     end
 
-    # --check changes nothing. A plain git status can rewrite .git/index inside the plugin folder, and the shell reloads
-    # a plugin whose folder changes, which loses an open box (review C23).
+    # --check changes nothing, also inside .git: a plain git status can rewrite .git/index (review C23).
     def self.git(dir, *args)
       res = Child.run(["git", "--no-optional-locks", "-C", dir] + args)
       return nil if res.missing || res.timed_out || !res.ok
